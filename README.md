@@ -1,212 +1,139 @@
-# Documentation for Track Bracket Tournament Component
+Tournament Bracket Component Documentation
+This document provides instructions on how to properly integrate and use the React Tournament Bracket component. The component is designed to visualize a series of matches, display winners for each round, and allow for the generation of a high-quality, shareable image of the final bracket.
 
-## Introduction
+Features ✨
+Dynamic Sizing: The main bracket view automatically scales to fit its container.
 
-This React component suite is designed to visualize a single-elimination tournament bracket for tracks (e.g., songs or music items). It supports displaying matches across multiple rounds, highlighting winners, and crowning a champion. Key features include:
+Theming: Includes four built-in themes (Space, Sunset, Ocean, Gold) for the exported image.
 
-- **Dynamic Bracket Rendering**: Automatically calculates positions, connectors, and scaling based on the number of rounds and matches.
-- **Theming**: Predefined themes (space, sunset, ocean, gold) with customizable gradients, colors, and styles.
-- **Sharing Modal**: A modal for previewing and downloading the bracket as a PNG image, with options to toggle champion display, artist names, and watermark.
-- **Mock Data Generation**: A tester app (`App`) that generates random mock data for bracket sizes of 8, 16, or 32 tracks.
-- **Responsive Design**: The main view scales to fit the container, with overflow handling for large brackets.
+Customizable Export: Easily toggle the visibility of the champion, track artists, and a "Made with" watermark on the final image.
 
-The code is written in TypeScript and uses modern React features (hooks like `useState`, `useRef`, `useEffect`, `useMemo`). It is marked as `"use client"` for client-side rendering in frameworks like Next.js.
+High-Quality Image Export: Uses html-to-image to generate a crisp 1920x1080 PNG, perfect for sharing.
 
-This documentation ensures proper usage to avoid errors and bugs, including handling edge cases like odd-numbered tracks (BYEs), null values, CORS issues with images, and performance considerations for large brackets.
+Mock Data Generation: Includes a simple utility to generate mock data for testing purposes.
 
-## Prerequisites and Installation
+Data Structures 📊
+To use the component correctly, you must provide data in a specific format. The component's functionality depends entirely on the structure of the rounds and winners props.
 
-### Required Dependencies
-Install the following packages via npm or yarn. These are essential for the components to function:
+Track Object
+Each competitor in the bracket is a Track object.
 
-- `react` and `react-dom`: ^18.0.0 (core React libraries).
-- `framer-motion`: ^10.0.0 (for animations in modals and buttons).
-- `lucide-react`: ^0.0.0 (icon library for Crown, Share, X, Download, etc.).
-- `html-to-image`: ^1.0.0 (for converting the bracket to a PNG image).
-- `@types/react` and `@types/react-dom`: For TypeScript support.
+export type Track = {
+  id: string; // A unique identifier for the track
+  name: string; // The name of the song
+  images?: { url: string }[]; // An array of images. The first one is used.
+  artists?: { name: string }[]; // An array of artists. Their names are joined.
+};
 
-Example installation command:
-```
-npm install react react-dom framer-motion lucide-react html-to-image @types/react @types/react-dom
-```
+Match Object
+Each Match represents a single contest between two tracks.
 
-### Setup in Your Project
-1. **Copy the Code**: Paste the provided code into a file like `Bracket.tsx` or `App.tsx` in your React project.
-2. **Import and Use**: Export the main component (`BracketPage` or `App`) and render it in your app.
-3. **Fonts and Styles**: The code uses Tailwind CSS classes (e.g., `bg-gray-900`, `text-white`). Ensure Tailwind CSS is set up in your project (via `tailwind.config.js` and PostCSS). If not using Tailwind, replace classes with equivalent CSS.
-4. **Image Handling**: Images are loaded from URLs (e.g., Spotify-style track images). Use `crossOrigin="anonymous"` to avoid CORS issues during image export.
-5. **Browser Compatibility**: Tested in modern browsers (Chrome, Firefox). Uses ES6+ features; polyfill if needed for older browsers.
+export type Match = {
+  a: Track; // The first competitor. This is required.
+  b: Track | null; // The second competitor. Can be null in case of a BYE.
+};
 
-### Potential Setup Pitfalls
-- **CORS Errors**: If track images are from external domains (e.g., Spotify), ensure the server allows CORS. The `toPng` function uses `{ mode: 'cors', cache: 'no-cache' }` to mitigate this, but test with real images.
-- **React Strict Mode**: If enabled, `useEffect` may run twice - this is harmless here but could cause duplicate renders in development.
-- **Node.js Version**: Requires Node.js ^18 for modern features.
+Core Props: rounds and winners
+The BracketPage component requires two main props:
 
-## Usage
+rounds: An array of arrays, where each inner array represents a round of the tournament (Match[][]).
 
-### Main Components
-The code defines several interconnected components. The entry point is `App`, which wraps everything for testing. For production, use `BracketPage` directly with your data.
+rounds[0] is the first round, rounds[1] is the second, and so on.
 
-#### 1. `App` (Tester Component)
-This is a top-level wrapper for testing with mock data. It allows selecting bracket sizes and generates random winners.
+Each match in a round must be an object conforming to the Match type.
 
-- **Props**: None.
-- **Usage Example**:
-  ```tsx
-  import App from './Bracket'; // Assuming the file is Bracket.tsx
+winners: An array of arrays that mirrors the structure of rounds and contains the Track objects of the winners for each round (Track[][]).
 
-  function MyApp() {
-    return <App />;
-  }
-  ```
-- **Behavior**: 
-  - Displays a header with buttons to generate brackets for 8, 16, or 32 tracks.
-  - Uses `generateMockData` to create random tracks, matches, and winners.
-  - Renders `BracketPage` with the generated data.
-- **Customization**: Modify `generateMockData` to use real data (e.g., fetch from an API).
+winners[0] should contain the winners of the matches in rounds[0].
 
-#### 2. `BracketPage`
-The core page component that displays the bracket and share button.
+The order is not important, as the component finds the winner by matching the id.
 
-- **Props**:
-  - `rounds: Match[][]`: Array of rounds, where each round is an array of `Match` objects. Each `Match` has `a: Track` (required) and `b: Track | null` (optional for BYEs).
-  - `winners: Track[][]`: Array of winners per round, mirroring the structure of `rounds`.
-- **Usage Example**:
-  ```tsx
-  import { BracketPage } from './Bracket';
+The final winner (the champion) is determined by being the single entry in the last array of the winners prop (e.g., winners[winners.length - 1][0]).
 
-  const myRounds = [ /* Your match data */ ];
-  const myWinners = [ /* Your winner data */ ];
+⚠️ Critical: The data integrity between rounds and winners is essential. An incorrect or incomplete winners prop will cause the bracket to render incorrectly or fail to display a champion.
 
-  function MyPage() {
-    return <BracketPage rounds={myRounds} winners={myWinners} />;
-  }
-  ```
-- **Behavior**:
-  - Validates input: If `rounds` or `winners` are empty/invalid, shows an error message.
-  - Determines the champion from the last winner array.
-  - Includes a "Share" button to open the modal.
-  - Renders `MainBracketView` for the interactive bracket.
+How to Use 🚀
+Below is a complete example based on the provided page.tsx file. It demonstrates how to generate data and pass it to the BracketPage component.
 
-#### 3. `MainBracketView`
-Renders the scalable bracket view (used in `BracketPage`).
+In a real application, you would fetch your rounds and winners data from an API instead of using the generateMockData function.
 
-- **Props**:
-  - `rounds: Match[][]`
-  - `winners: Track[][]`
-  - `champion: Track`
-- **Key Features**:
-  - Uses `ResizeObserver` to dynamically scale the bracket to fit the container.
-  - Draws connectors with SVG paths.
-  - Displays tracks with images, names (artists hidden by default here, but shown in share view).
-- **Pitfalls to Avoid**:
-  - Ensure the parent container has a defined width/height (e.g., `min-h-[80vh]`).
-  - For very large brackets (>64 tracks), performance may degrade due to many DOM elements - optimize by limiting rounds or using virtualization.
+// 1. Import necessary components and types
+import React, { useState, useEffect, FC } from 'react';
+import { BracketPage, Match, Track } from './BracketComponent'; // Assuming component is in this path
 
-#### 4. `ShareModal`
-A modal for customizing and downloading the bracket as an image.
+// 2. (Optional) Data generation logic for your app
+// In a real app, this data would come from your backend.
+const generateAppData = (size: number): { rounds: Match[][]; winners: Track[][] } => {
+    const tracks: Track[] = Array.from({ length: size }, (_, i) => ({
+        id: `track_${i + 1}`,
+        name: `Song Title ${i + 1}`,
+        images: [{ url: `https://placehold.co/200x200/4f46e5/ffffff?text=${i + 1}` }],
+        artists: [{ name: `Artist Name ${i + 1}` }],
+    }));
 
-- **Props**:
-  - `showModal: boolean`: Controls visibility.
-  - `onClose: () => void`: Callback to close the modal.
-  - `champion: Track`
-  - `rounds: Match[][]`
-  - `winners: Track[][]`
-- **Options (Internal State)**:
-  - `theme: string` (one of: 'space', 'sunset', 'ocean', 'gold').
-  - `showChampion: boolean` (default: true).
-  - `showArtists: boolean` (default: true).
-  - `showWatermark: boolean` (default: true).
-- **Behavior**:
-  - Renders a preview using `BracketShareView`.
-  - Theme buttons change the background gradient and colors.
-  - Toggle buttons for options update the preview in real-time.
-  - "Download Image" button generates a PNG via `toPng` and downloads it.
-- **Usage**: Typically controlled by state in the parent (e.g., `BracketPage`).
-- **Pitfalls**:
-  - Image generation uses a temporary off-screen DOM node - ensure no conflicting global styles.
-  - Delays (e.g., `setTimeout`) are used for rendering; increase if images don't load in time.
-  - Error Handling: Catches failures in `toPng` and shows feedback (e.g., "Error creating image.").
+    let currentRoundTracks = [...tracks];
+    const allRounds: Match[][] = [];
+    const allWinners: Track[][] = [];
 
-#### 5. `BracketShareView`
-The static view used in the share modal for image export (fixed 1920x1080 resolution).
+    while (currentRoundTracks.length > 1) {
+        const roundMatches: Match[] = [];
+        const roundWinners: Track[] = [];
+        for (let i = 0; i < currentRoundTracks.length; i += 2) {
+            const trackA = currentRoundTracks[i];
+            const trackB = currentRoundTracks[i + 1] || null;
+            roundMatches.push({ a: trackA, b: trackB });
+            const winner = trackB ? (Math.random() > 0.5 ? trackA : trackB) : trackA;
+            roundWinners.push(winner);
+        }
+        allRounds.push(roundMatches);
+        allWinners.push(roundWinners);
+        currentRoundTracks = roundWinners;
+    }
+    return { rounds: allRounds, winners: allWinners };
+};
 
-- **Props**:
-  - `rounds: Match[][]`
-  - `winners: Track[][]`
-  - `champion: Track`
-  - `options: ShareOptions` (theme and toggles).
-- **Behavior**:
-  - Fixed size for consistent exports.
-  - Applies theme styles.
-  - Optionally shows champion, artists, and watermark.
-  - Scales down if the bracket exceeds 1800x1000.
-- **Pitfalls**:
-  - Images must load fully before export - use placeholders if URLs are invalid.
-  - Watermark uses a base64 SVG; replace if needed.
 
-### Data Structures
-- **Track**:
-  ```tsx
-  type Track = {
-    id: string;
-    name: string;
-    images?: { url: string }[];
-    artists?: { name: string }[];
-  };
-  ```
-  - `images[0].url` is used for display; falls back to placeholder.
-- **Match**:
-  ```tsx
-  type Match = {
-    a: Track;
-    b: Track | null; // null for BYE
-  };
-  ```
-- **Input Validation**:
-  - `rounds` should be a power-of-2 structure (e.g., 16 tracks → rounds of 8, 4, 2, 1 matches).
-  - `winners` must align with `rounds` (e.g., winners[0] has winners from rounds[0]).
-  - Champion is `winners[winners.length - 1][0]`.
+// 3. Your main App or Page component
+const App: FC = () => {
+    const [data, setData] = useState<{ rounds: Match[][]; winners: Track[][] } | null>(null);
+    const [bracketSize, setBracketSize] = useState(16);
 
-### Generating Data
-Use `generateMockData(size: number)` to create test data:
-- Supports any size, handles odd numbers with BYEs.
-- Randomly selects winners.
-- Example: `const { rounds, winners } = generateMockData(16);`
+    useEffect(() => {
+        setData(generateAppData(bracketSize));
+    }, [bracketSize]);
 
-## Examples
+    // Add a key to BracketPage to ensure it re-renders when data changes
+    const handleGenerateData = (size: number) => {
+        setBracketSize(size);
+    };
 
-### Basic Integration
-```tsx
-import { BracketPage } from './Bracket';
-import { generateMockData } from './Bracket'; // Export this function if needed
+    return (
+        <div style={{ backgroundColor: '#111827', color: 'white', fontFamily: 'sans-serif' }}>
+            <header className="p-6 bg-gray-800 shadow-lg">
+                <h1 className="text-3xl font-bold text-center text-white">Bracket Component Tester</h1>
+                <p className="text-center text-gray-400 mt-2">Select a bracket size to generate mock data.</p>
+                <div className="flex justify-center gap-4 mt-6">
+                    {[8, 16, 32].map(size => (
+                        <button key={size} onClick={() => handleGenerateData(size)} className={`px-6 py-2 rounded-lg text-lg font-medium bg-slate-700 text-white transition-transform hover:translate-y-[-2px] ${bracketSize === size ? 'bg-blue-500 font-bold' : ''}`}>
+                            {size} Tracks
+                        </button>
+                    ))}
+                </div>
+            </header>
+            <main>
+                {data ? (
+                    <BracketPage rounds={data.rounds} winners={data.winners} key={bracketSize} />
+                ) : (
+                    <div className="text-center p-10">Generating data...</div>
+                )}
+            </main>
+        </div>
+    );
+};
 
-const { rounds, winners } = generateMockData(16);
+export default App;
 
-function Demo() {
-  return <BracketPage rounds={rounds} winners={winners} />;
-}
-```
+Troubleshooting and Best Practices
+Image CORS Errors: The html-to-image library requires that all images loaded onto the canvas are served with permissive Access-Control-Allow-Origin headers. If you are using images from a third-party service (like Spotify), you may encounter CORS errors. The best solution is to proxy these images through your own backend.
 
-### Custom Data
-Fetch real data (e.g., from Spotify API) and map to `Track[]`, then build `rounds` and simulate `winners`.
-
-## Troubleshooting and Best Practices
-
-### Common Errors and Fixes
-- **Image Not Loading in Export**: Ensure `crossOrigin="anonymous"` on `<img>`. Test with local images. If CORS blocks, proxy images.
-- **Blank PNG Download**: Increase `setTimeout` delays in `handleDownload` (e.g., to 1000ms) for image loading.
-- **Scaling Issues**: If bracket overflows, adjust `matchWidth`, `hGap` constants. Use `overflow-x-auto` on parent.
-- **No Champion Detected**: Ensure `winners` has at least one round with one track.
-- **Animation Glitches**: Framer Motion requires a unique key on animated elements; already handled with `key={`${r}-${i}`}`.
-- **Performance**: For >32 tracks, memoize more (already uses `useMemo` for positions/connectors).
-- **TypeScript Errors**: Ensure props match types; null-check optional fields (e.g., `track.images?.[0]?.url`).
-
-### Best Practices
-- **Real Data Integration**: Replace mock data with API calls in `useEffect`.
-- **Accessibility**: Add ARIA labels to buttons/icons. Use semantic HTML.
-- **Testing**: Unit test with Jest/React Testing Library (e.g., snapshot `BracketShareView`).
-- **Customization**: Extend themes by adding to `themes` object.
-- **Deployment**: In Next.js, ensure `"use client"` is at the top for client-only features.
-
-This setup ensures a bug-free experience when followed. If issues persist, check console logs for errors during render/export.
+Component Not Updating: If you change the bracket data and the component doesn't re-render correctly, ensure you are passing a key prop to the `<BracketPage />
