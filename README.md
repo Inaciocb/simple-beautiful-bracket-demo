@@ -3,7 +3,12 @@
 
 This document provides instructions on how to integrate and use the `simple-beautiful-bracket` component in your application. The component is a flexible tournament bracket visualizer that supports single-elimination formats. It handles dynamic bracket generation and image exports for sharing. It was originally built for a Song Ranking application and that is why the objects are named 'Tracks' or 'Songs', that may be updated in the future.
 
-To get started, install the package using npm:
+A good use of the package is this very demo application. You can find the deployed website [here].(https://simple-beautiful-bracket.vercel.app/).
+Feel free to use it for your projects.
+
+
+## Tutorial:
+install the package using npm:
 
 Bash
 
