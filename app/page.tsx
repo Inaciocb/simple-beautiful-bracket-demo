@@ -409,7 +409,7 @@ const MainBracketView: FC<{ rounds: Match[][]; winners: Competitor[][]; champion
   );
 };
 
-const BracketPage: FC<{ rounds: Match[][]; winners: Competitor[][]; onCompetitorChange: (roundIndex: number, matchIndex: number, competitorKey: 'a' | 'b', field: 'name' | 'subtitle', value: string) => void; onWinnerSelect: (roundIndex: number, matchIndex: number, winner: Competitor) => void; matchWidth: number; matchHeight: number; hGap: number; vGap: number; }> = ({ rounds, winners, onCompetitorChange, onWinnerSelect, matchWidth, matchHeight, hGap, vGap }) => {
+const BracketPage: FC<{ rounds: Match[][]; winners: Competitor[][]; champion: Competitor | null; onCompetitorChange: (roundIndex: number, matchIndex: number, competitorKey: 'a' | 'b', field: 'name' | 'subtitle', value: string) => void; onWinnerSelect: (roundIndex: number, matchIndex: number, winner: Competitor) => void; matchWidth: number; matchHeight: number; hGap: number; vGap: number; }> = ({ rounds, winners, onCompetitorChange, onWinnerSelect, matchWidth, matchHeight, hGap, vGap }) => {
   const [isShareModalOpen, setShareModalOpen] = useState(false);
   const champion = winners.length > 0 ? winners[winners.length - 1]?.[0] || null : null;
 
@@ -429,7 +429,7 @@ const BracketPage: FC<{ rounds: Match[][]; winners: Competitor[][]; onCompetitor
   );
 }
 
-// NOTE: This generation logic is complex and has been left untouched as requested.
+
 const generateBracketData = (competitors: Competitor[], isManual = false): { rounds: Match[][]; winners: Competitor[][] } => {
     if (competitors.length < 2) return { rounds: [], winners: [] };
     const players = [...competitors].sort(() => Math.random() - 0.5);
@@ -491,7 +491,6 @@ const generateBracketData = (competitors: Competitor[], isManual = false): { rou
     return { rounds: allRounds, winners: allWinners };
 };
 
-
 const App: FC = () => {
   const [bracketData, setBracketData] = useState<{ rounds: Match[][]; winners: Competitor[][] } | null>(null);
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
@@ -506,7 +505,7 @@ const App: FC = () => {
   const MAX_COMPETITORS = 1024;
 
   useEffect(() => {
-    const initialCompetitors = Array.from({ length: 13 }, (_, i) => ({
+    const initialCompetitors = Array.from({ length: 9 }, (_, i) => ({
       id: `competitor_${i + 1}`, name: `Competitor ${i + 1}`, subtitle: `Subtitle for ${i + 1}`,
       images: [{ url: `https://placehold.co/200x200/4f46e5/ffffff?text=${i+1}` }],
     }));
@@ -604,6 +603,15 @@ const App: FC = () => {
     <div className="bg-slate-900 text-white font-sans min-h-screen">
       <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)]"></div>
       <header className="relative p-6 border-b border-slate-700/50">
+        <div className="absolute top-6 right-6 flex items-center gap-4 text-slate-300">
+            <span className="text-base hidden sm:inline font-medium">Inácio Buemo</span>
+            <a href="https://www.linkedin.com/in/inaciocb/" target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity" aria-label="LinkedIn Profile">
+                <img src="/linkedin.png" alt="LinkedIn" className="w-21 " />
+            </a>
+            <a href="https://github.com/inaciocb/" target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity" aria-label="GitHub Profile">
+                <img src="/github.svg" alt="GitHub" className="w-7 filter" />
+            </a>
+        </div>
         <h1 className="text-3xl font-bold text-center text-transparent bg-clip-text bg-gradient-to-r from-slate-200 to-slate-400">Bracket Component Tester</h1>
         <p className="text-center text-slate-400 mt-2">Add, edit, or remove competitors, then generate the bracket.</p>
       </header>
@@ -664,7 +672,7 @@ const App: FC = () => {
       <main className="relative">
         <AnimatePresence>
             {bracketData && bracketData.rounds.length > 0 ? (
-            <BracketPage {...{rounds: bracketData.rounds, winners: bracketData.winners, onCompetitorChange: handleCompetitorChangeInBracket, onWinnerSelect: handleWinnerSelect, matchWidth, matchHeight, hGap, vGap}} />
+            <BracketPage {...{rounds: bracketData.rounds, winners: bracketData.winners, champion: bracketData.winners[bracketData.winners.length - 1]?.[0] || null, onCompetitorChange: handleCompetitorChangeInBracket, onWinnerSelect: handleWinnerSelect, matchWidth, matchHeight, hGap, vGap}} />
             ) : (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-center p-10 text-slate-500">Add at least two competitors to generate a bracket.</motion.div>
             )}
