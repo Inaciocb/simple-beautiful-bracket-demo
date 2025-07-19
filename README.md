@@ -7,8 +7,10 @@ provides instructions on how to integrate and use the `simple-beautiful-bracket`
 An example of a good use of the package is this very demo application. You can find the deployed website [here](https://simple-beautiful-bracket.vercel.app/), the source code is app/page.tsx.  
 Feel free to use it for your projects.
 
+## Use examples
+Music app:
 <img width="1602" height="818" alt="image" src="https://github.com/user-attachments/assets/2fa4ad0c-de76-44d9-a052-1659c460605a" />
-
+Bracket Generation:
 <img width="997" height="444" alt="image" src="https://github.com/user-attachments/assets/cf4c1580-8246-45c5-8159-b76f15ca1665" />
 
 
