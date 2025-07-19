@@ -3,6 +3,8 @@
 
 This document provides comprehensive instructions on how to integrate and use the `simple-beautiful-bracket` component in your React application. The component is a flexible, interactive tournament bracket visualizer that supports single-elimination formats. It handles dynamic bracket generation, user interactions (e.g., editing competitors, selecting winners), and high-quality image exports for sharing.
 
+```npm install simple-beautiful-bracket@latest```
+
 ## Features
 
 - **Dynamic Bracket Rendering**: Automatically positions matches, connectors, and a champion card based on the number of rounds and competitors.
