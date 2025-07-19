@@ -1,139 +1,216 @@
-Tournament Bracket Component Documentation
-This document provides instructions on how to properly integrate and use the React Tournament Bracket component. The component is designed to visualize a series of matches, display winners for each round, and allow for the generation of a high-quality, shareable image of the final bracket.
 
-Features ✨
-Dynamic Sizing: The main bracket view automatically scales to fit its container.
+# simple-beautiful-bracket Package Documentation
 
-Theming: Includes four built-in themes (Space, Sunset, Ocean, Gold) for the exported image.
+This document provides comprehensive instructions on how to integrate and use the `simple-beautiful-bracket` component in your React application. The component is a flexible, interactive tournament bracket visualizer that supports single-elimination formats. It handles dynamic bracket generation, user interactions (e.g., editing competitors, selecting winners), and high-quality image exports for sharing.
 
-Customizable Export: Easily toggle the visibility of the champion, track artists, and a "Made with" watermark on the final image.
+## Features
 
-High-Quality Image Export: Uses html-to-image to generate a crisp 1920x1080 PNG, perfect for sharing.
+- **Dynamic Bracket Rendering**: Automatically positions matches, connectors, and a champion card based on the number of rounds and competitors.
+- **Interactive Mode**: Allows editing competitor names/subtitles directly in the bracket, selecting winners to advance them, and managing byes for odd-numbered competitors.
+- **Static Display**: Can be used as a non-interactive view by omitting callback props.
+- **Customizable Layout**: Adjust match card dimensions and gaps via props for fine-tuned spacing.
+- **Theming and Effects**: Built-in themes (Space, Sunset, Ocean, Gold) for exported images, with toggles for particles, vignette, champion display, and subtitles.
+- **Image Export**: Generate crisp PNG images via a share modal, with real-time previews and options for visual enhancements.
+- **Data Generation Utility**: `generateBracketData` function to create bracket structures from a list of competitors, supporting "random" (simulated winners) or "manual" (user-filled) modes.
+- **Competitor Management**: Supports adding/removing competitors, image uploads, and state propagation for changes.
+- **Responsive Design**: Scales to fit containers, with overflow handling for large brackets.
+- **Animations and Effects**: Uses Framer Motion for smooth transitions and includes particle effects for visual flair.
 
-Mock Data Generation: Includes a simple utility to generate mock data for testing purposes.
+The package is built with TypeScript, React hooks, Framer Motion, Lucide Icons, and html-to-image. It's client-side only (marked `"use client"` for Next.js compatibility).
 
-Data Structures 📊
-To use the component correctly, you must provide data in a specific format. The component's functionality depends entirely on the structure of the rounds and winners props.
+## Prerequisites and Installation
 
-Track Object
-Each competitor in the bracket is a Track object.
+### Required Dependencies
+Install these via npm or yarn:
 
-export type Track = {
-  id: string; // A unique identifier for the track
-  name: string; // The name of the song
-  images?: { url: string }[]; // An array of images. The first one is used.
-  artists?: { name: string }[]; // An array of artists. Their names are joined.
+- `react` and `react-dom`: ^18.0.0
+- `framer-motion`: ^10.0.0
+- `lucide-react`: ^0.0.0
+- `html-to-image`: ^1.0.0
+- `@types/react` and `@types/react-dom` (for TypeScript)
+
+Example:
+```
+npm install react react-dom framer-motion lucide-react html-to-image @types/react @types/react-dom
+```
+
+### Setup
+1. Install the package: `npm install simple-beautiful-bracket`
+2. Import components and types in your code.
+3. Ensure Tailwind CSS is configured (for styles like `bg-slate-900`, `text-white`). If not using Tailwind, adapt the classes to your CSS framework.
+4. Handle images: Use `crossOrigin="anonymous"` for external images to avoid CORS issues during export. Proxy third-party images if needed.
+
+## Data Structures
+
+### Competitor
+Represents a participant (e.g., player, team, or track).
+
+```tsx
+export type Competitor = {
+  id: string; // Unique identifier
+  name: string; // Primary display name
+  subtitle?: string; // Optional secondary text (e.g., team/artist)
+  images?: { url: string }[]; // Array of image URLs; first one is used
 };
+```
 
-Match Object
-Each Match represents a single contest between two tracks.
+### Match
+A single contest in a round.
 
+```tsx
 export type Match = {
-  a: Track; // The first competitor. This is required.
-  b: Track | null; // The second competitor. Can be null in case of a BYE.
+  a: Competitor | null; // First competitor (null for empty slots)
+  b: Competitor | null; // Second competitor (null for byes or empty slots)
 };
+```
 
-Core Props: rounds and winners
-The BracketPage component requires two main props:
+- Brackets are arrays of rounds (`Match[][]`), starting with the initial round.
+- Winners mirror rounds (`Competitor[][]`), using IDs to track advancements.
 
-rounds: An array of arrays, where each inner array represents a round of the tournament (Match[][]).
+## Components
 
-rounds[0] is the first round, rounds[1] is the second, and so on.
+### BracketPage
+The main component for displaying the bracket and share functionality.
 
-Each match in a round must be an object conforming to the Match type.
+#### Props
+| Prop                  | Type                                                                 | Required | Default | Description |
+|-----------------------|----------------------------------------------------------------------|----------|---------|-------------|
+| rounds                | Match[][]                                                            | Yes      | -       | Array of rounds with matches. |
+| winners               | Competitor[][]                                                       | Yes      | -       | Array of winners per round, aligned with `rounds`. |
+| onCompetitorChange    | (roundIndex: number, matchIndex: number, key: 'a' \| 'b', field: 'name' \| 'subtitle', value: string) => void | No       | -       | Callback for editing a competitor's name or subtitle in the bracket. |
+| onWinnerSelect        | (roundIndex: number, matchIndex: number, winner: Competitor) => void | No       | -       | Callback for selecting a winner, which advances them and clears future slots. |
+| matchWidth            | number                                                               | No       | 310     | Width of each match card (pixels). |
+| matchHeight           | number                                                               | No       | 150     | Height of each match card (pixels). |
+| hGap                  | number                                                               | No       | 80      | Horizontal gap between rounds (pixels). |
+| vGap                  | number                                                               | No       | 25      | Vertical gap between matches in the first round (doubles per subsequent round). |
 
-winners: An array of arrays that mirrors the structure of rounds and contains the Track objects of the winners for each round (Track[][]).
+- If callbacks are omitted, the bracket is static (no editing/selecting).
+- Champion is auto-detected from the last winners array.
 
-winners[0] should contain the winners of the matches in rounds[0].
+## Usage
 
-The order is not important, as the component finds the winner by matching the id.
+### Basic Example (Static Bracket)
+For a non-interactive display:
 
-The final winner (the champion) is determined by being the single entry in the last array of the winners prop (e.g., winners[winners.length - 1][0]).
+```tsx
+import { BracketPage, generateBracketData, Competitor } from 'simple-beautiful-bracket';
 
-⚠️ Critical: The data integrity between rounds and winners is essential. An incorrect or incomplete winners prop will cause the bracket to render incorrectly or fail to display a champion.
+const competitors: Competitor[] = [
+  { id: '1', name: 'Competitor 1', subtitle: 'Team A', images: [{ url: 'image1.jpg' }] },
+  // ... more competitors
+];
 
-How to Use 🚀
-Below is a complete example based on the provided page.tsx file. It demonstrates how to generate data and pass it to the BracketPage component.
+const { rounds, winners } = generateBracketData(competitors, false); // Random mode
 
-In a real application, you would fetch your rounds and winners data from an API instead of using the generateMockData function.
+function MyPage() {
+  return <BracketPage rounds={rounds} winners={winners} />;
+}
+```
 
-// 1. Import necessary components and types
-import React, { useState, useEffect, FC } from 'react';
-import { BracketPage, Match, Track } from './BracketComponent'; // Assuming component is in this path
+### Interactive Example (Full State Management)
+For a fully editable bracket, manage state and use callbacks. This mirrors the tester app's logic.
 
-// 2. (Optional) Data generation logic for your app
-// In a real app, this data would come from your backend.
-const generateAppData = (size: number): { rounds: Match[][]; winners: Track[][] } => {
-    const tracks: Track[] = Array.from({ length: size }, (_, i) => ({
-        id: `track_${i + 1}`,
-        name: `Song Title ${i + 1}`,
-        images: [{ url: `https://placehold.co/200x200/4f46e5/ffffff?text=${i + 1}` }],
-        artists: [{ name: `Artist Name ${i + 1}` }],
+```tsx
+import React, { useState, useEffect } from 'react';
+import { BracketPage, generateBracketData, Competitor, Match } from 'simple-beautiful-bracket';
+
+const App: React.FC = () => {
+  const [competitors, setCompetitors] = useState<Competitor[]>([]);
+  const [bracketData, setBracketData] = useState<{ rounds: Match[][]; winners: Competitor[][] } | null>(null);
+
+  useEffect(() => {
+    // Load initial competitors (e.g., from API)
+    const initial = Array.from({ length: 8 }, (_, i) => ({
+      id: `comp_${i + 1}`,
+      name: `Competitor ${i + 1}`,
+      subtitle: `Subtitle ${i + 1}`,
+      images: [{ url: `https://placehold.co/200x200?text=${i + 1}` }],
     }));
+    setCompetitors(initial);
+    setBracketData(generateBracketData(initial, true)); // Manual mode
+  }, []);
 
-    let currentRoundTracks = [...tracks];
-    const allRounds: Match[][] = [];
-    const allWinners: Track[][] = [];
-
-    while (currentRoundTracks.length > 1) {
-        const roundMatches: Match[] = [];
-        const roundWinners: Track[] = [];
-        for (let i = 0; i < currentRoundTracks.length; i += 2) {
-            const trackA = currentRoundTracks[i];
-            const trackB = currentRoundTracks[i + 1] || null;
-            roundMatches.push({ a: trackA, b: trackB });
-            const winner = trackB ? (Math.random() > 0.5 ? trackA : trackB) : trackA;
-            roundWinners.push(winner);
+  const handleCompetitorChange = (roundIndex: number, matchIndex: number, key: 'a' | 'b', field: 'name' | 'subtitle', value: string) => {
+    if (!bracketData) return;
+    const newRounds = JSON.parse(JSON.stringify(bracketData.rounds));
+    const newWinners = JSON.parse(JSON.stringify(bracketData.winners));
+    const competitor = newRounds[roundIndex][matchIndex][key];
+    if (competitor) {
+      const id = competitor.id;
+      const updated = { ...competitor, [field]: value };
+      // Propagate changes through all rounds and winners
+      for (let r = 0; r < newRounds.length; r++) {
+        for (let m = 0; m < newRounds[r].length; m++) {
+          if (newRounds[r][m].a?.id === id) newRounds[r][m].a = updated;
+          if (newRounds[r][m].b?.id === id) newRounds[r][m].b = updated;
         }
-        allRounds.push(roundMatches);
-        allWinners.push(roundWinners);
-        currentRoundTracks = roundWinners;
+      }
+      for (let w = 0; w < newWinners.length; w++) {
+        for (let i = 0; i < newWinners[w].length; i++) {
+          if (newWinners[w][i].id === id) newWinners[w][i] = updated;
+        }
+      }
+      setBracketData({ rounds: newRounds, winners: newWinners });
     }
-    return { rounds: allRounds, winners: allWinners };
-};
+  };
 
+  const handleWinnerSelect = (roundIndex: number, matchIndex: number, winner: Competitor) => {
+    if (!bracketData) return;
+    let newRounds = JSON.parse(JSON.stringify(bracketData.rounds));
+    let newWinners = JSON.parse(JSON.stringify(bracketData.winners));
+    // Clear future progression logic (copy from code: clearFutureProgression, update winners, advance to next rounds)
+    // Full implementation as in the provided code's handleWinnerSelect
+    setBracketData({ rounds: newRounds, winners: newWinners });
+  };
 
-// 3. Your main App or Page component
-const App: FC = () => {
-    const [data, setData] = useState<{ rounds: Match[][]; winners: Track[][] } | null>(null);
-    const [bracketSize, setBracketSize] = useState(16);
-
-    useEffect(() => {
-        setData(generateAppData(bracketSize));
-    }, [bracketSize]);
-
-    // Add a key to BracketPage to ensure it re-renders when data changes
-    const handleGenerateData = (size: number) => {
-        setBracketSize(size);
-    };
-
-    return (
-        <div style={{ backgroundColor: '#111827', color: 'white', fontFamily: 'sans-serif' }}>
-            <header className="p-6 bg-gray-800 shadow-lg">
-                <h1 className="text-3xl font-bold text-center text-white">Bracket Component Tester</h1>
-                <p className="text-center text-gray-400 mt-2">Select a bracket size to generate mock data.</p>
-                <div className="flex justify-center gap-4 mt-6">
-                    {[8, 16, 32].map(size => (
-                        <button key={size} onClick={() => handleGenerateData(size)} className={`px-6 py-2 rounded-lg text-lg font-medium bg-slate-700 text-white transition-transform hover:translate-y-[-2px] ${bracketSize === size ? 'bg-blue-500 font-bold' : ''}`}>
-                            {size} Tracks
-                        </button>
-                    ))}
-                </div>
-            </header>
-            <main>
-                {data ? (
-                    <BracketPage rounds={data.rounds} winners={data.winners} key={bracketSize} />
-                ) : (
-                    <div className="text-center p-10">Generating data...</div>
-                )}
-            </main>
-        </div>
-    );
+  return (
+    <div className="bg-slate-900 text-white min-h-screen">
+      {/* UI for adding/editing competitors */}
+      {bracketData && (
+        <BracketPage
+          rounds={bracketData.rounds}
+          winners={bracketData.winners}
+          onCompetitorChange={handleCompetitorChange}
+          onWinnerSelect={handleWinnerSelect}
+          matchWidth={310}
+          matchHeight={150}
+          hGap={80}
+          vGap={25}
+        />
+      )}
+    </div>
+  );
 };
 
 export default App;
+```
 
-Troubleshooting and Best Practices
-Image CORS Errors: The html-to-image library requires that all images loaded onto the canvas are served with permissive Access-Control-Allow-Origin headers. If you are using images from a third-party service (like Spotify), you may encounter CORS errors. The best solution is to proxy these images through your own backend.
+### Generating Bracket Data
+Use `generateBracketData(competitors: Competitor[], isManual = false)` to build the structure:
+- `isManual: true`: Creates empty higher rounds for user filling.
+- `isManual: false`: Simulates random winners.
+- Handles byes for odd counts.
+- Max competitors: 1024 (performance limit).
 
-Component Not Updating: If you change the bracket data and the component doesn't re-render correctly, ensure you are passing a key prop to the `<BracketPage />
+### Share Modal Options
+In the modal (opened via Share button):
+- Themes: Space, Sunset, Ocean, Gold.
+- Toggles: Champion, Subtitle, Particles (animated/static dots), Vignette (shadow overlay).
+
+## Troubleshooting and Best Practices
+
+### Common Issues
+- **CORS Errors on Export**: Ensure images have CORS headers. Use `crossOrigin="anonymous"` and proxy if needed. Increase timeouts in `toPng` for slow loads.
+- **State Mutations**: Always deep-copy `rounds`/`winners` in callbacks to trigger React re-renders.
+- **Large Brackets**: For >64 competitors, adjust gaps/widths; performance may drop—test scaling.
+- **No Champion**: Ensure `winners` has a final entry; regenerate if needed.
+- **Image Uploads**: Use `FileReader` for local previews, as shown in the code.
+
+### Best Practices
+- **State Management**: Use deep copies for immutability. Integrate with Redux/Zustand for complex apps.
+- **Customization**: Extend themes by forking the code. Add ARIA labels for accessibility.
+- **Testing**: Use React Testing Library for snapshots. Test with odd/even competitor counts.
+- **Deployment**: In Next.js, place in client components. Optimize images for faster exports.
+- **Limitations**: Power-of-2 structures preferred; byes auto-handled. No multi-bracket support.
+
+For issues, check console logs. Contribute via GitHub (linked in the app). This ensures seamless integration and a bug-free experience.
